@@ -24,6 +24,21 @@ export default function LessonScreen() {
   const currentModule = MODULES.find(m => m.lessons.some(l => l.id === id));
   const lesson = currentModule?.lessons.find(l => l.id === id);
 
+  // Hooks ANTES de qualquer return condicional. Antes eles ficavam depois do
+  // "Lição não encontrada": se o id mudasse para uma lição inexistente com a
+  // tela montada, o React quebraria ("Rendered fewer hooks than expected").
+  // Navigation stage: 0 to totalSteps - 1 (reading steps); totalSteps to totalStages - 1 (quiz)
+  const [stageIndex, setStageIndex] = useState(0);
+
+  // Quiz state
+  const [selectedOption, setSelectedOption] = useState<QuizOption | null>(null);
+  const [hasAnswered, setHasAnswered] = useState(false);
+
+  // Completion state
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [unlockedBadgesList, setUnlockedBadgesList] = useState<string[]>([]);
+  const [rollsEarned, setRollsEarned] = useState(1);
+
   if (!lesson) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -40,18 +55,6 @@ export default function LessonScreen() {
   const totalSteps = lesson.steps.length;
   const totalQuiz = lesson.quiz.length;
   const totalStages = totalSteps + totalQuiz;
-
-  // Navigation stage: 0 to totalSteps - 1 (reading steps); totalSteps to totalStages - 1 (quiz)
-  const [stageIndex, setStageIndex] = useState(0);
-
-  // Quiz state
-  const [selectedOption, setSelectedOption] = useState<QuizOption | null>(null);
-  const [hasAnswered, setHasAnswered] = useState(false);
-
-  // Completion state
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [unlockedBadgesList, setUnlockedBadgesList] = useState<string[]>([]);
-  const [rollsEarned, setRollsEarned] = useState(1);
 
   const isReadingStep = stageIndex < totalSteps;
   const currentStep = isReadingStep ? lesson.steps[stageIndex] : null;
@@ -103,7 +106,7 @@ export default function LessonScreen() {
 
           <Text style={styles.celebrationTitle}>Lição Concluída!</Text>
           <Text style={styles.celebrationSubtitle}>
-            Você dominou "{lesson.title}" e conquistou novas rolagens do Dado D20!
+            Você dominou {`"${lesson.title}"`} e conquistou novas rolagens do Dado D20!
           </Text>
 
           {/* Reward Badges Grid */}
