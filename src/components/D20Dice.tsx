@@ -244,6 +244,10 @@ export const D20Dice: React.FC = () => {
               <Text style={styles.satRewardText}>+{currentResult?.totalSatsEarned} SATS</Text>
             </View>
 
+            <Text style={styles.simulationNote}>
+              Sats simulados: projeto educacional, sem valor real
+            </Text>
+
             {/* Action Buttons */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -559,6 +563,12 @@ const styles = StyleSheet.create({
     color: BitcoinColors.bitcoin,
     fontSize: 24,
     fontWeight: '900',
+  },
+  simulationNote: {
+    color: BitcoinColors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 20,
   },
   modalButtons: {
     width: '100%',

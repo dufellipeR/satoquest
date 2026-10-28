@@ -51,6 +51,10 @@ export default function WalletScreen() {
             <Text style={styles.conversionText}>≈ R$ {brlEstimate}</Text>
           </View>
 
+          <Text style={styles.simulationNote}>
+            Sats simulados: projeto educacional, sem valor real
+          </Text>
+
           {/* Action Buttons: Withdraw & Receive */}
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
@@ -263,12 +267,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  simulationNote: {
+    color: BitcoinColors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 20,
+  },
   conversionDot: {
     color: BitcoinColors.textMuted,
   },
   actionButtonsRow: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 20,
   },
   withdrawBtn: {
     flex: 1,

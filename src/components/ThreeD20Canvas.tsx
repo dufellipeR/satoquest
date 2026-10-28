@@ -615,12 +615,9 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
           onError={(e: any) => markFailed('falha de rede: ' + (e?.nativeEvent?.description || 'desconhecido'))}
           onHttpError={(e: any) => markFailed('HTTP ' + (e?.nativeEvent?.statusCode ?? 'erro'))}
           javaScriptEnabled={true}
-          domStorageEnabled={true}
           scrollEnabled={false}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
-          allowFileAccess={true}
-          mixedContentMode="always"
           overScrollMode="never"
           androidLayerType="hardware"
         />
