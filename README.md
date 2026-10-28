@@ -1,56 +1,74 @@
-# Welcome to your Expo app 👋
+# SatoQuest ⚡🎮
+> **Aplicativo Educativo e Gamificado sobre a Rede Bitcoin**
+> Desenvolvido em **React Native** com **Expo** e **TypeScript** para atender aos objetivos da **Atividade Extensionista III: Tecnologia Aplicada à Inclusão Digital (UNINTER)**.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+---
 
-## Get started
+## 🎯 Objetivos Atendidos (Alinhamento UNINTER)
 
-1. Install dependencies
+- **Ensinar os fundamentos da rede Bitcoin:** 4 módulos progressivos com conceitos claros, analogias didáticas e quizzes de fixação interativos com explicações para cada resposta.
+- **Gamificar o ensino da rede Bitcoin:** Sistema estilo Duolingo com níveis, streaks, XP, galeria de conquistas (Badges) e a **Roleta dos Satoshis (Lucky Wheel)** para sortear recompensas em satoshinhos.
+- **Incentivar o uso de ferramentas do ecossistema:** Aba dedicada **"Ecossistema"** com ferramentas reais (Mempool.space, BlueWallet, Muun, Phoenix, Sparrow, Bisq, BTCPay Server) com links e guias práticos de por que e como utilizá-las.
+- **Desenvolver em React Native:** Desenvolvido com React Native, Expo Router, tema Bitcoin Dark Mode e arquitetura 100% offline-first via AsyncStorage.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## 🚀 Como Executar o Aplicativo
 
-   ```bash
-   npx expo start
-   ```
+### Pré-requisitos
+- Node.js (>= 18) ou Bun instalado.
+- Celular com o app **Expo Go** (disponível na Google Play e App Store) ou navegador web.
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. Iniciar o servidor de desenvolvimento:
 ```bash
-npm run reset-project
+cd /home/hayek/Documents/projects/satoquest
+
+# Com Bun:
+bun start
+
+# Ou com npm / npx:
+npx expo start
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+### 2. Abrir no Celular ou Navegador:
+- **No Celular:** Escaneie o QR Code exibido no terminal com o app **Expo Go** (no Android) ou com a câmera (no iOS).
+- **No Navegador (Web):** Pressione `w` no terminal ou execute `bun run web`.
 
-### Other setup steps
+---
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## 📱 Estrutura do Aplicativo
 
-## Learn more
+### Abas Principais (Tabs)
+1. **Aprender (`/`)**: Trilhas modulares progressivas com status de conclusão e porcentagem de progresso.
+2. **Roleta (`/wheel`)**: Roleta da sorte animada com prêmios de 21, 50, 100, 210, 500 e 1000 satoshinhos, com feedback sonoro/háptico e celebração.
+3. **Carteira (`/wallet`)**: Exibição do saldo acumulado em satoshis (com valor aproximado em BTC e BRL), extrato de transações e o **Simulador de Saque** (Lightning vs. On-chain) que gera comprovante e hash TXID autêntico.
+4. **Ecossistema (`/tools`)**: Hub prático com filtros por categoria (Explorer, Carteira, Lightning, Privacidade, Hardware).
+5. **Perfil (`/profile`)**: Indicadores de nível, barra de XP, streak de dias de estudo e galeria de badges conquistadas.
 
-To learn more about developing your project with Expo, look at the following resources:
+### Módulos de Ensino (`src/constants/curriculum.ts`)
+- **Módulo 1: O Dinheiro & Origem do Bitcoin**
+  - Lição 1: O Que é Dinheiro?
+  - Lição 2: O Nascimento do Bitcoin (Satoshi Nakamoto, 2008 e o Bloco Gênese)
+  - Lição 3: A Regra dos 21 Milhões e os Satoshis
+- **Módulo 2: Blockchain, Blocos & Mineração**
+  - Lição 1: O Livro-Razão Distribuído e Nós (Nodes)
+  - Lição 2: Blocos e a Prova de Trabalho (Proof of Work & SHA-256)
+  - Lição 3: O Halving e o Ajuste de Dificuldade
+- **Módulo 3: Carteiras, Chaves Privadas & Segurança**
+  - Lição 1: Chaves Públicas e Privadas (A Caixa de Correio)
+  - Lição 2: A Sagrada Seed Phrase (12/24 Palavras BIP-39)
+  - Lição 3: Not Your Keys, Not Your Coins (Autocustódia vs Corretoras)
+- **Módulo 4: Lightning Network & Ferramentas do Ecossistema**
+  - Lição 1: O Desafio da Escalabilidade (Camada 1 vs Camada 2)
+  - Lição 2: Como Usar a Lightning Network (Invoices e Liquidação Instantânea)
+  - Lição 3: Ferramentas do Ecossistema na Prática
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🛠️ Tecnologias e Bibliotecas
+- **React Native 0.88** & **Expo SDK 58**
+- **Expo Router** (Roteamento baseado em arquivos com Tabs e Stack Modals)
+- **TypeScript** (Tipagem estrita e zero erros de compilação)
+- **@react-native-async-storage/async-storage** (Persistência local offline-first)
+- **@expo/vector-icons** (Ionicons para iconografia nativa)
+- **expo-haptics** (Feedback tátil nos botões, quizzes e roleta)
