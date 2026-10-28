@@ -1,17 +1,26 @@
-import React, { useRef } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import { BitcoinColors } from '@/constants/theme';
 import { THREE_JS_SOURCE } from '@/constants/threeSource';
+
+export type ThreeD20Status = 'loading' | 'ready' | 'failed';
 
 interface ThreeD20CanvasProps {
   size?: number;
   onRollComplete?: (result: number) => void;
   onRollStart?: () => void;
+  onStatusChange?: (status: ThreeD20Status, reason: string) => void;
 }
 
 export interface ThreeD20Ref {
   roll: (targetNumber: number) => void;
 }
+
+// Se o WebView não confirmar o primeiro frame renderizado, assumimos falha e
+// mostramos o motivo em vez de deixar a área do dado em branco.
+const READY_TIMEOUT_MS = 6000;
 
 const buildHtml = () => `
 <!DOCTYPE html>
@@ -43,6 +52,31 @@ const buildHtml = () => `
     }
   </style>
   <script>
+    // Instalado ANTES do bundle do Three.js: sem isso, um erro dentro do
+    // bundle não seria reportado a ninguém e a tela ficaria apenas em branco.
+    window.notifyRN = function (payload) {
+      try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        } else if (window.parent && window.parent !== window) {
+          window.parent.postMessage(JSON.stringify(payload), '*');
+        }
+      } catch (e) {
+        // WebView ainda sem ponte de mensagens: nada a fazer aqui.
+      }
+    };
+
+    window.onerror = function (msg, url, line) {
+      window.notifyRN({ type: 'ERROR', message: 'JS: ' + msg + ' (linha ' + line + ')' });
+      return false;
+    };
+
+    window.addEventListener('unhandledrejection', function (event) {
+      var reason = event && event.reason && event.reason.message ? event.reason.message : String(event && event.reason);
+      window.notifyRN({ type: 'ERROR', message: 'Promise: ' + reason });
+    });
+  </script>
+  <script>
     ${THREE_JS_SOURCE}
   </script>
 </head>
@@ -50,12 +84,6 @@ const buildHtml = () => `
   <div id="canvas-container"></div>
 
   <script>
-    window.onerror = function(msg, url, line) {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: msg + ' (' + line + ')' }));
-      }
-    };
-
     let scene, camera, renderer, dieMesh, wireframeMesh;
     let particles;
     let isRolling = false;
@@ -70,6 +98,33 @@ const buildHtml = () => `
     if (width < 50) width = 280;
     if (height < 50) height = 280;
 
+    // 0. Sonde de WebGL explícita. O Android WebView tem um numero limitado de
+    // contextos e falha de formas diferentes por dispositivo, entao detectamos
+    // e reportamos em vez de deixar o THREE.WebGLRenderer morrer em silencio.
+    let webglMode = 'none';
+    let probeCanvas = null;
+    let probeCtx = null;
+    try {
+      const probeOpts = {
+        alpha: true,
+        antialias: false,
+        depth: true,
+        stencil: false,
+        failIfMajorPerformanceCaveat: false,
+      };
+      probeCanvas = document.createElement('canvas');
+      probeCtx = probeCanvas.getContext('webgl2', probeOpts);
+      if (probeCtx) {
+        webglMode = 'webgl2';
+      } else {
+        probeCtx = probeCanvas.getContext('webgl', probeOpts) || probeCanvas.getContext('experimental-webgl', probeOpts);
+        if (probeCtx) webglMode = 'webgl1';
+      }
+    } catch (probeErr) {
+      webglMode = 'none';
+      probeCtx = null;
+    }
+
     // 1. Scene & Camera
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
@@ -78,18 +133,49 @@ const buildHtml = () => `
     startQuat = new THREE.Quaternion();
     targetQuat = new THREE.Quaternion();
 
-    // 2. Renderer (with alpha)
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    // 2. Renderer em estagios. preserveDrawingBuffer e necessario em varios
+    // Android WebView com camada de hardware + fundo transparente, onde o
+    // canvas WebGL e desenhado mas nunca composto (tela em branco).
+    const rendererAttempts = [
+      { antialias: true, alpha: true, preserveDrawingBuffer: true },
+      { antialias: false, alpha: true, preserveDrawingBuffer: true },
+      { canvas: probeCanvas, context: probeCtx },
+    ];
+
+    let lastRendererError = null;
+    for (let ri = 0; ri < rendererAttempts.length; ri++) {
+      if (ri === 2 && !probeCtx) continue;
+      try {
+        renderer = new THREE.WebGLRenderer(rendererAttempts[ri]);
+        break;
+      } catch (err) {
+        lastRendererError = err;
+        renderer = null;
+      }
+    }
+
+    if (!renderer) {
+      window.notifyRN({
+        type: 'WEBGL_UNAVAILABLE',
+        message:
+          'Falha ao criar o WebGLRenderer (' +
+          (lastRendererError && lastRendererError.message ? lastRendererError.message : 'motivo desconhecido') +
+          ') | sonda: ' + webglMode,
+      });
+    } else {
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 2, 2.5));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.setClearColor(0x000000, 0); // 100% transparent
+      renderer.setClearColor(0x000000, 0); // 100% transparente
       container.appendChild(renderer.domElement);
-    } catch (e) {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: 'WebGL Init Failed: ' + e.message }));
-      }
+
+      renderer.domElement.addEventListener(
+        'webglcontextlost',
+        function () {
+          window.notifyRN({ type: 'ERROR', message: 'Contexto WebGL perdido (webglcontextlost).' });
+        },
+        false,
+      );
     }
 
     // 3. Lighting (Baldur's Gate 3 Golden Arcane Atmosphere)
@@ -149,7 +235,7 @@ const buildHtml = () => `
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = 'bold ' + (num === 20 || num === 1 ? '58px' : '52px') + ' system-ui, sans-serif';
-      
+
       ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
       ctx.shadowBlur = 8;
       ctx.shadowOffsetX = 2;
@@ -181,7 +267,7 @@ const buildHtml = () => `
 
       const center = new THREE.Vector3().add(vA).add(vB).add(vC).divideScalar(3);
       const normal = center.clone().normalize();
-      faceNormals.push({ faceIndex: f, normal, number: d20Numbers[f % 20] });
+      faceNormals.push({ faceIndex: f, normal: normal, number: d20Numbers[f % 20] });
 
       const num = d20Numbers[f % 20];
       const tex = createNumberTexture(num);
@@ -222,7 +308,9 @@ const buildHtml = () => `
     scene.add(particles);
 
     // Initial orientation: face 20 pointing at camera
-    const f20 = faceNormals.find(f => f.number === 20);
+    const f20 = faceNormals.find(function (f) {
+      return f.number === 20;
+    });
     if (f20) {
       dieMesh.quaternion.setFromUnitVectors(f20.normal, new THREE.Vector3(0, 0, 1));
     }
@@ -230,12 +318,14 @@ const buildHtml = () => `
     // 7. Roll Action Handler
     let targetResultNum = 20;
 
-    window.triggerRoll = function(targetNum) {
+    window.triggerRoll = function (targetNum) {
       targetResultNum = targetNum || 20;
       isRolling = true;
       rollStartTime = performance.now();
 
-      const targetFace = faceNormals.find(f => f.number === targetResultNum) || faceNormals[0];
+      const targetFace = faceNormals.find(function (f) {
+        return f.number === targetResultNum;
+      }) || faceNormals[0];
       targetQuat.setFromUnitVectors(targetFace.normal, new THREE.Vector3(0, 0, 1));
       startQuat.copy(dieMesh.quaternion);
 
@@ -245,8 +335,15 @@ const buildHtml = () => `
     };
 
     // 8. Animation Loop
+    let renderOkFrames = 0;
+    let renderFailFrames = 0;
+
     function animate(time) {
       requestAnimationFrame(animate);
+
+      // Sem renderer ou sem malha nao ha nada para desenhar: saímos sem lancar
+      // excecao a cada frame (o timeout do lado RN trata de avisar o usuario).
+      if (!renderer || !dieMesh) return;
 
       if (particles) {
         particles.rotation.y = time * 0.0003;
@@ -278,24 +375,29 @@ const buildHtml = () => `
           dieMesh.quaternion.copy(targetQuat);
           dieMesh.scale.set(1.0, 1.0, 1.0);
 
-          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'ROLL_COMPLETE',
-              number: targetResultNum,
-            }));
-          } else if (window.parent) {
-            window.parent.postMessage(JSON.stringify({
-              type: 'ROLL_COMPLETE',
-              number: targetResultNum,
-            }), '*');
-          }
+          window.notifyRN({ type: 'ROLL_COMPLETE', number: targetResultNum });
         }
       } else {
         dieMesh.position.y = Math.sin(time * 0.002) * 0.06;
       }
 
-      if (renderer) {
+      try {
         renderer.render(scene, camera);
+        renderOkFrames++;
+        if (renderOkFrames === 1) {
+          // READY so depois do PRIMEIRO FRAME de verdade, nao depois que o
+          // script terminou de rodar: script ok + frame nunca desenhado era
+          // exatamente o cenario do dado invisivel.
+          window.notifyRN({ type: 'READY', message: 'primeiro frame renderizado' });
+        }
+      } catch (renderErr) {
+        renderFailFrames++;
+        if (renderFailFrames === 1 || renderFailFrames === 60) {
+          window.notifyRN({
+            type: 'ERROR',
+            message: 'render(): ' + (renderErr && renderErr.message ? renderErr.message : String(renderErr)),
+          });
+        }
       }
     }
 
@@ -318,59 +420,167 @@ const buildHtml = () => `
     function handleMessage(event) {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data.type === 'ROLL') {
+        if (data && data.type === 'ROLL') {
           window.triggerRoll(data.targetNumber);
         }
-      } catch (e) {}
+      } catch (e) {
+        // Mensagem que nao vem de nos (ex. bridge do proprio WebView).
+      }
     }
 
     window.addEventListener('message', handleMessage);
     document.addEventListener('message', handleMessage);
 
-    // Notify ready
-    if (window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY' }));
-    }
+    // O script parseou. Isso NAO significa que o 3D esta visivel — por isso o
+    // lado RN espera o READY do primeiro frame, e nao este evento.
+    window.notifyRN({ type: 'LOADED', message: 'script three.js carregado' });
   </script>
 </body>
 </html>
 `;
 
 export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>(
-  ({ size = 280, onRollComplete, onRollStart }, ref) => {
+  function ThreeD20Canvas({ size = 280, onRollComplete, onRollStart, onStatusChange }, ref) {
     const webViewRef = useRef<any>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const WebViewComp: any = WebView;
 
+    const [dice, setDice] = useState<{ status: ThreeD20Status; reason: string }>({
+      status: 'loading',
+      reason: '',
+    });
+
+    const statusRef = useRef<ThreeD20Status>('loading');
+    const pendingRollRef = useRef<number | null>(null);
+    const onStatusChangeRef = useRef(onStatusChange);
+
+    useEffect(() => {
+      onStatusChangeRef.current = onStatusChange;
+    }, [onStatusChange]);
+
+    useEffect(() => {
+      statusRef.current = dice.status;
+      onStatusChangeRef.current?.(dice.status, dice.reason);
+    }, [dice]);
+
     const htmlContent = React.useMemo(() => buildHtml(), []);
+
+    const sendRoll = useCallback((targetNumber: number) => {
+      const msg = JSON.stringify({ type: 'ROLL', targetNumber });
+      if (Platform.OS === 'web') {
+        if (iframeRef.current && iframeRef.current.contentWindow) {
+          iframeRef.current.contentWindow.postMessage(msg, '*');
+        }
+      } else {
+        webViewRef.current?.postMessage(msg);
+      }
+    }, []);
+
+    const markReady = useCallback(() => {
+      setDice(prev => (prev.status === 'ready' ? prev : { status: 'ready', reason: '' }));
+    }, []);
+
+    const markFailed = useCallback((reason: string) => {
+      setDice(prev => (prev.status === 'failed' && prev.reason === reason ? prev : { status: 'failed', reason }));
+    }, []);
+
+    const dispatchPayload = useCallback(
+      (payload: any) => {
+        if (!payload || typeof payload.type !== 'string') return;
+
+        switch (payload.type) {
+          case 'READY': {
+            markReady();
+            // Rolagem pedida antes do 3D estar pronto nao e mais descartada.
+            if (pendingRollRef.current !== null) {
+              const queued = pendingRollRef.current;
+              pendingRollRef.current = null;
+              sendRoll(queued);
+            }
+            break;
+          }
+          case 'ERROR':
+          case 'WEBGL_UNAVAILABLE':
+            markFailed(String(payload.message || 'erro desconhecido no 3D'));
+            break;
+          case 'ROLL_COMPLETE':
+            if (onRollComplete) onRollComplete(payload.number);
+            break;
+          default:
+            // LOADED não muda nada visível: o READY do primeiro frame é o que vale.
+            break;
+        }
+      },
+      [markFailed, markReady, onRollComplete, sendRoll],
+    );
+
+    const dispatchRef = useRef(dispatchPayload);
+    useEffect(() => {
+      dispatchRef.current = dispatchPayload;
+    }, [dispatchPayload]);
 
     React.useImperativeHandle(ref, () => ({
       roll: (targetNumber: number) => {
         if (onRollStart) onRollStart();
 
-        const msg = JSON.stringify({ type: 'ROLL', targetNumber });
-        if (Platform.OS === 'web') {
-          if (iframeRef.current && iframeRef.current.contentWindow) {
-            iframeRef.current.contentWindow.postMessage(msg, '*');
-          }
-        } else {
-          webViewRef.current?.postMessage(msg);
+        if (statusRef.current === 'loading') {
+          pendingRollRef.current = targetNumber;
+          return;
         }
+
+        // 'ready' envia na hora; 'failed' tenta mesmo assim para nao travar a
+        // rolagem (o resultado ja esta calculado no GameContext).
+        sendRoll(targetNumber);
       },
     }));
 
-    const handleMessage = (event: any) => {
-      try {
-        const data = JSON.parse(event.nativeEvent.data);
-        if (data.type === 'ROLL_COMPLETE' && onRollComplete) {
-          onRollComplete(data.number);
-        } else if (data.type === 'ERROR') {
-          console.warn('[ThreeD20 WebGL Error]:', data.message);
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (statusRef.current === 'loading') {
+          markFailed('o WebView não confirmou a renderização 3D em ' + READY_TIMEOUT_MS / 1000 + 's');
         }
-      } catch (e) {
-        // Ignore
+      }, READY_TIMEOUT_MS);
+      return () => clearTimeout(timer);
+    }, [markFailed]);
+
+    // Na web o iframe nao tem ponte de mensagens do RN: usamos postMessage.
+    useEffect(() => {
+      if (Platform.OS !== 'web') return;
+
+      const listener = (event: MessageEvent) => {
+        if (typeof event.data !== 'string') return;
+        try {
+          dispatchRef.current(JSON.parse(event.data));
+        } catch {
+          // Mensagem de outra origem, nao nos interessa.
+        }
+      };
+
+      window.addEventListener('message', listener);
+      return () => window.removeEventListener('message', listener);
+    }, []);
+
+    const handleWebViewMessage = (event: any) => {
+      try {
+        dispatchPayload(JSON.parse(event.nativeEvent.data));
+      } catch {
+        // Payload malformado: ignorar.
       }
     };
+
+    const failedOverlay =
+      dice.status === 'failed' ? (
+        <View style={styles.failOverlay} pointerEvents="none">
+          <MaterialCommunityIcons name="alert-circle-outline" size={28} color={BitcoinColors.textMuted} />
+          <Text style={styles.failTitle}>3D indisponível</Text>
+          <Text style={styles.failReason} numberOfLines={4}>
+            {dice.reason}
+          </Text>
+        </View>
+      ) : null;
+
+    // Barra de diagnóstico removida: o problema de renderização era a largura
+    // 0px do WebView, já corrigida. Fica só o overlay de falha.
 
     if (Platform.OS === 'web') {
       return (
@@ -386,6 +596,7 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
               pointerEvents: 'none',
             },
           })}
+          {failedOverlay}
         </View>
       );
     }
@@ -396,8 +607,13 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
           ref={webViewRef}
           originWhitelist={['*']}
           source={{ html: htmlContent, baseUrl: 'https://localhost' }}
-          style={styles.webView}
-          onMessage={handleMessage}
+          style={[styles.webView, { width: size, height: size }]}
+          onMessage={handleWebViewMessage}
+          onErrorSynthetic={(e: any) =>
+            markFailed('erro de carregamento: ' + (e?.nativeEvent?.description || e?.nativeEvent?.error || 'desconhecido'))
+          }
+          onError={(e: any) => markFailed('falha de rede: ' + (e?.nativeEvent?.description || 'desconhecido'))}
+          onHttpError={(e: any) => markFailed('HTTP ' + (e?.nativeEvent?.statusCode ?? 'erro'))}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           scrollEnabled={false}
@@ -406,10 +622,12 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
           allowFileAccess={true}
           mixedContentMode="always"
           overScrollMode="never"
+          androidLayerType="hardware"
         />
+        {failedOverlay}
       </View>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({
@@ -421,8 +639,30 @@ const styles = StyleSheet.create({
   },
   webView: {
     backgroundColor: 'transparent',
+    // Tamanho em PIXEL é obrigatório aqui: com width/height '100%' o WebView
+    // do Android mediu 0 de largura (onLayout 0x290), o canvas ficava
+    // centralizado num container de 0px e o overflow:hidden cortava tudo.
+  },
+  failOverlay: {
+    position: 'absolute',
     width: '100%',
     height: '100%',
-    opacity: 0.99, // ensures hardware rendering on Android
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 6,
+  },
+  failTitle: {
+    color: BitcoinColors.textSecondary,
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  failReason: {
+    color: BitcoinColors.textMuted,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: 'center',
   },
 });

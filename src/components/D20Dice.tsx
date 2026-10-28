@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { useGame, triggerHaptic } from '@/context/GameContext';
 import { BitcoinColors } from '@/constants/theme';
 import { D20Result } from '@/types';
-import { ThreeD20Canvas, ThreeD20Ref } from './ThreeD20Canvas';
+import { ThreeD20Canvas, ThreeD20Ref, ThreeD20Status } from './ThreeD20Canvas';
 
 const { width } = Dimensions.get('window');
 const DIE_SIZE = Math.min(width - 48, 290);
@@ -26,6 +26,12 @@ export const D20Dice: React.FC = () => {
   const [isRolling, setIsRolling] = useState(false);
   const [currentResult, setCurrentResult] = useState<D20Result | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // O WebView do 3D demora a carregar o bundle do Three.js. Rolar antes disso
+  // era perdido silenciosamente, então liberamos o botão somente quando o
+  // primeiro frame for confirmado ('ready') ou quando o 3D falhar.
+  const [diceStatus, setDiceStatus] = useState<ThreeD20Status>('loading');
+  const diceLoading = diceStatus === 'loading';
 
   const handleRoll = async () => {
     if (isRolling || userState.diceRollsAvailable <= 0) return;
@@ -107,6 +113,7 @@ export const D20Dice: React.FC = () => {
             ref={canvasRef}
             size={DIE_SIZE}
             onRollComplete={handleCanvasRollComplete}
+            onStatusChange={setDiceStatus}
           />
         </View>
 
@@ -120,19 +127,26 @@ export const D20Dice: React.FC = () => {
       <TouchableOpacity
         style={[
           styles.rollButton,
-          (userState.diceRollsAvailable <= 0 || isRolling) && styles.rollButtonDisabled,
+          (userState.diceRollsAvailable <= 0 || isRolling || diceLoading) && styles.rollButtonDisabled,
         ]}
         onPress={handleRoll}
-        disabled={userState.diceRollsAvailable <= 0 || isRolling}
+        disabled={userState.diceRollsAvailable <= 0 || isRolling || diceLoading}
         activeOpacity={0.85}
       >
         <MaterialCommunityIcons
           name={isRolling ? 'dice-d20-outline' : 'dice-d20'}
           size={24}
-          color="#000000"
+          color={diceLoading ? BitcoinColors.textSecondary : '#000000'}
         />
-        <Text style={styles.rollButtonText}>
-          {isRolling
+        <Text
+          style={[
+            styles.rollButtonText,
+            (diceLoading || isRolling || userState.diceRollsAvailable <= 0) && styles.rollButtonTextDisabled,
+          ]}
+        >
+          {diceLoading
+            ? 'CARREGANDO 3D...'
+            : isRolling
             ? 'ROLANDO D20 EM 3D...'
             : userState.diceRollsAvailable > 0
             ? 'ROLAR DADO D20'
@@ -386,6 +400,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  rollButtonTextDisabled: {
+    color: BitcoinColors.textSecondary,
   },
   tierGuideCard: {
     width: '100%',
