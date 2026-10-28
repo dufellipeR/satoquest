@@ -140,9 +140,9 @@ export const D20Dice: React.FC = () => {
           ]}
         >
           {diceLoading
-            ? 'CARREGANDO 3D...'
+            ? 'CARREGANDO...'
             : isRolling
-            ? 'ROLANDO D20 EM 3D...'
+            ? 'ROLANDO D20...'
             : userState.diceRollsAvailable > 0
             ? 'ROLAR DADO D20'
             : 'SEM ROLAGENS DISPONÍVEIS'}
