@@ -40,13 +40,6 @@ transferidos ou negociados. O aplicativo **não** cria carteiras, **não** solic
 chaves privadas ou frases de recuperação (seed phrase) e **não** acessa nenhum
 saldo real.
 
-## Links para sites externos
-
-A aba "Ecossistema" abre sites de terceiros (por exemplo, mempool.space e
-bluewallet.io) no navegador do seu aparelho. A partir desse momento, você está
-sujeito às políticas de privacidade desses sites, que não são controladas por
-este aplicativo.
-
 ## Crianças
 
 O aplicativo não é direcionado a menores de 13 anos, não coleta dados de nenhum

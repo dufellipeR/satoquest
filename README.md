@@ -8,7 +8,7 @@
 
 - **Ensinar os fundamentos da rede Bitcoin:** 4 módulos progressivos com conceitos claros, analogias didáticas e quizzes de fixação interativos com explicações para cada resposta.
 - **Gamificar o ensino da rede Bitcoin:** Sistema RPG estilo D&D e Baldur's Gate 3 com níveis, streaks, bônus de proficiência, galeria de conquistas (Badges) e o **Dado do Destino (D20)** para sortear recompensas em satoshinhos.
-- **Incentivar o uso de ferramentas do ecossistema:** Aba dedicada **"Ecossistema"** com ferramentas reais (Mempool.space, BlueWallet, Muun, Phoenix, Sparrow, Bisq, BTCPay Server) com links oficiais e guias práticos de uso.
+- **Incentivar o uso de ferramentas do ecossistema:** O Módulo 4 apresenta ferramentas reais (Mempool.space, BlueWallet, Muun, Phoenix, Sparrow, Bisq, BTCPay Server) com guias práticos dentro das lições.
 - **Desenvolver em React Native:** Desenvolvido com React Native, Expo Router, tema Bitcoin Dark Mode e arquitetura 100% offline-first via AsyncStorage.
 
 ---
@@ -58,8 +58,7 @@ bun run web
    - **Total 2 a 11:** 🪙 *Sucesso Básico!* -> **50 satoshis**.
    - **1 Natural (Nat 1):** 🧙‍♂️ *Falha Crítica...* com consolação de **21 satoshis**.
 3. **Carteira (`/wallet`)**: Exibição do saldo acumulado em satoshis (com valor de referência em BTC e BRL), extrato de transações e o **Simulador de Saque** (Lightning vs. On-chain) que gera comprovante com hash TXID autêntico de 64 caracteres.
-4. **Ecossistema (`/tools`)**: Hub prático com filtros por categoria (Explorer, Carteira, Lightning, Privacidade, Hardware).
-5. **Perfil (`/profile`)**: Indicadores de nível, barra de XP, streak de dias de estudo e galeria de badges conquistadas.
+4. **Perfil (`/profile`)**: Indicadores de nível, barra de XP, streak de dias de estudo e galeria de badges conquistadas.
 
 ---
 

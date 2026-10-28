@@ -80,16 +80,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="tools"
-        options={{
-          title: 'Ecossistema',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={String(color)} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',

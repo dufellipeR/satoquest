@@ -1,12 +1,3 @@
-import type { ComponentProps } from 'react';
-import type { Ionicons } from '@expo/vector-icons';
-
-/**
- * Nome válido de ícone da família Ionicons. Tipar isso faz um nome inválido
- * quebrar o build, em vez de só renderizar um espaço vazio com warning.
- */
-export type IoniconsName = ComponentProps<typeof Ionicons>['name'];
-
 export interface QuizOption {
   id: string;
   text: string;
@@ -73,19 +64,6 @@ export interface Transaction {
   feeSats?: number;
   destination?: string;
   status: 'confirmed' | 'pending';
-}
-
-export interface EcosystemTool {
-  id: string;
-  name: string;
-  category: 'Explorer' | 'Carteira' | 'Lightning' | 'Privacidade' | 'Hardware';
-  tagline: string;
-  description: string;
-  whyUseIt: string;
-  difficulty: 'Iniciante' | 'Intermediário' | 'Avançado';
-  url: string;
-  iconName: IoniconsName;
-  recommendedFor: string;
 }
 
 export interface D20Result {
