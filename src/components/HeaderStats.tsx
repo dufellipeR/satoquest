@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useGame } from '@/context/GameContext';
 import { BitcoinColors } from '@/constants/theme';
@@ -8,6 +8,8 @@ import { BitcoinColors } from '@/constants/theme';
 export const HeaderStats: React.FC = () => {
   const { userState } = useGame();
   const router = useRouter();
+
+  const rollsCount = userState.diceRollsAvailable ?? 0;
 
   return (
     <View style={styles.container}>
@@ -24,16 +26,18 @@ export const HeaderStats: React.FC = () => {
         </View>
       </View>
 
-      {/* Sats Balance & Wheel Spins */}
+      {/* Sats Balance & D20 Rolls */}
       <View style={styles.rightGroup}>
-        {userState.spinsAvailable > 0 && (
+        {rollsCount > 0 && (
           <TouchableOpacity
-            style={[styles.statPill, styles.spinPill]}
-            onPress={() => router.push('/wheel')}
+            style={[styles.statPill, styles.dicePill]}
+            onPress={() => router.push('/dice')}
             activeOpacity={0.8}
           >
-            <Ionicons name="disc" size={15} color="#FFD700" />
-            <Text style={styles.spinText}>{userState.spinsAvailable} giro{userState.spinsAvailable > 1 ? 's' : ''}</Text>
+            <MaterialCommunityIcons name="dice-d20" size={16} color="#FFD700" />
+            <Text style={styles.diceText}>
+              {rollsCount} D20{rollsCount > 1 ? 's' : ''}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -87,11 +91,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  spinPill: {
+  dicePill: {
     backgroundColor: 'rgba(255, 215, 0, 0.15)',
     borderColor: 'rgba(255, 215, 0, 0.4)',
   },
-  spinText: {
+  diceText: {
     color: '#FFD700',
     fontSize: 12,
     fontWeight: '800',

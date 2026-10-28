@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { BitcoinColors } from '@/constants/theme';
 import { useGame } from '@/context/GameContext';
@@ -39,10 +39,10 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="wheel"
+        name="dice"
         options={{
-          title: 'Roleta',
-          tabBarBadge: userState.spinsAvailable > 0 ? userState.spinsAvailable : undefined,
+          title: 'Dado D20',
+          tabBarBadge: userState.diceRollsAvailable > 0 ? userState.diceRollsAvailable : undefined,
           tabBarBadgeStyle: {
             backgroundColor: '#FFD700',
             color: '#000000',
@@ -50,7 +50,11 @@ export default function TabLayout() {
             fontWeight: '900',
           },
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'disc' : 'disc-outline'} size={22} color={String(color)} />
+            <MaterialCommunityIcons
+              name={focused ? 'dice-d20' : 'dice-d20-outline'}
+              size={24}
+              color={String(color)}
+            />
           ),
         }}
       />

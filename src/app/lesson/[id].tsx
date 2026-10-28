@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { MODULES } from '@/constants/curriculum';
 import { BADGES } from '@/constants/badges';
 import { BitcoinColors } from '@/constants/theme';
@@ -51,7 +51,7 @@ export default function LessonScreen() {
   // Completion state
   const [isCompleted, setIsCompleted] = useState(false);
   const [unlockedBadgesList, setUnlockedBadgesList] = useState<string[]>([]);
-  const [spinsEarned, setSpinsEarned] = useState(1);
+  const [rollsEarned, setRollsEarned] = useState(1);
 
   const isReadingStep = stageIndex < totalSteps;
   const currentStep = isReadingStep ? lesson.steps[stageIndex] : null;
@@ -88,7 +88,7 @@ export default function LessonScreen() {
       // Completed full lesson!
       const result = await completeLesson(lesson.id, lesson.xpReward);
       setUnlockedBadgesList(result.unlockedBadges);
-      setSpinsEarned(result.gainedSpins);
+      setRollsEarned(result.gainedRolls);
       setIsCompleted(true);
     }
   };
@@ -98,12 +98,12 @@ export default function LessonScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.celebrationContainer}>
           <View style={styles.celebrationIconBox}>
-            <Ionicons name="trophy" size={64} color="#FFD700" />
+            <MaterialCommunityIcons name="dice-d20" size={64} color="#FFD700" />
           </View>
 
           <Text style={styles.celebrationTitle}>Lição Concluída!</Text>
           <Text style={styles.celebrationSubtitle}>
-            Você dominou "{lesson.title}" e deu mais um passo em direção à soberania financeira.
+            Você dominou "{lesson.title}" e conquistou novas rolagens do Dado D20!
           </Text>
 
           {/* Reward Badges Grid */}
@@ -113,9 +113,9 @@ export default function LessonScreen() {
               <Text style={styles.rewardPillText}>+{lesson.xpReward} XP</Text>
             </View>
 
-            <View style={[styles.rewardPill, styles.spinPill]}>
-              <Ionicons name="disc" size={20} color="#FFD700" />
-              <Text style={styles.spinPillText}>+{spinsEarned} Giro{spinsEarned > 1 ? 's' : ''} na Roleta!</Text>
+            <View style={[styles.rewardPill, styles.dicePill]}>
+              <MaterialCommunityIcons name="dice-d20" size={20} color="#FFD700" />
+              <Text style={styles.dicePillText}>+{rollsEarned} D20{rollsEarned > 1 ? 's' : ''}!</Text>
             </View>
           </View>
 
@@ -135,15 +135,15 @@ export default function LessonScreen() {
           {/* Action Buttons */}
           <View style={styles.actionCol}>
             <TouchableOpacity
-              style={styles.spinNowBtn}
+              style={styles.rollNowBtn}
               onPress={() => {
-                triggerHaptic('impact');
-                router.replace('/wheel');
+                triggerHaptic('heavy');
+                router.replace('/dice');
               }}
               activeOpacity={0.85}
             >
-              <Ionicons name="disc" size={22} color="#000000" />
-              <Text style={styles.spinNowBtnText}>GIRAR A ROLETA AGORA 🎡</Text>
+              <MaterialCommunityIcons name="dice-d20" size={22} color="#000000" />
+              <Text style={styles.rollNowBtnText}>ROLAR O DADO D20 AGORA 🎲</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -653,11 +653,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
   },
-  spinPill: {
+  dicePill: {
     backgroundColor: 'rgba(255, 215, 0, 0.15)',
     borderColor: '#FFD700',
   },
-  spinPillText: {
+  dicePillText: {
     color: '#FFD700',
     fontWeight: '900',
     fontSize: 14,
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
-  spinNowBtn: {
+  rollNowBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
   },
-  spinNowBtnText: {
+  rollNowBtnText: {
     color: '#000000',
     fontSize: 15,
     fontWeight: '900',

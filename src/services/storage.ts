@@ -4,11 +4,11 @@ import { UserState } from '@/types';
 const STORAGE_KEY = '@satoquest_user_state_v1';
 
 export const INITIAL_USER_STATE: UserState = {
-  name: 'Bitcoiner Iniciante',
+  name: 'Aventureiro Bitcoin',
   xp: 0,
   level: 1,
   satsBalance: 50,
-  spinsAvailable: 1,
+  diceRollsAvailable: 1,
   streakDays: 1,
   completedLessonIds: [],
   unlockedBadgeIds: [],
@@ -30,7 +30,15 @@ export const loadStoredUserState = async (): Promise<UserState> => {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_USER_STATE;
     const parsed = JSON.parse(raw);
-    return { ...INITIAL_USER_STATE, ...parsed };
+    
+    // Migrate legacy spinsAvailable to diceRollsAvailable if needed
+    const diceRolls = parsed.diceRollsAvailable ?? parsed.spinsAvailable ?? 1;
+
+    return {
+      ...INITIAL_USER_STATE,
+      ...parsed,
+      diceRollsAvailable: diceRolls,
+    };
   } catch (error) {
     console.warn('Erro ao carregar estado salvo, utilizando estado padrão:', error);
     return INITIAL_USER_STATE;

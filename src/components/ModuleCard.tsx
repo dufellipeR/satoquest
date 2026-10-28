@@ -91,7 +91,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module }) => {
                     {lesson.title}
                   </Text>
                   <Text style={styles.lessonMeta}>
-                    {lesson.durationMin} min • +{lesson.xpReward} XP • +1 Giro 🎡
+                    {lesson.durationMin} min • +{lesson.xpReward} XP • +1 D20 🎲
                   </Text>
                 </View>
               </View>

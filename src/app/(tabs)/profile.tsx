@@ -112,9 +112,9 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.statBox}>
-            <Ionicons name="disc-outline" size={20} color="#FFD700" />
-            <Text style={styles.statVal}>{userState.spinsAvailable}</Text>
-            <Text style={styles.statLbl}>Giros Livres</Text>
+            <Ionicons name="dice-outline" size={20} color="#FFD700" />
+            <Text style={styles.statVal}>{userState.diceRollsAvailable ?? 0}</Text>
+            <Text style={styles.statLbl}>D20s Livres</Text>
           </View>
 
           <View style={styles.statBox}>

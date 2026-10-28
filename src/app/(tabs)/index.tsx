@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { HeaderStats } from '@/components/HeaderStats';
 import { ModuleCard } from '@/components/ModuleCard';
@@ -15,6 +15,7 @@ export default function LearnScreen() {
   const totalLessons = MODULES.reduce((acc, m) => acc + m.lessons.length, 0);
   const completedCount = userState.completedLessonIds.length;
   const overallPercent = Math.round((completedCount / totalLessons) * 100);
+  const rollsLeft = userState.diceRollsAvailable ?? 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -29,11 +30,11 @@ export default function LearnScreen() {
           <View style={styles.heroLeft}>
             <View style={styles.tagBadge}>
               <Ionicons name="sparkles" size={12} color="#FFD700" />
-              <Text style={styles.tagBadgeText}>EDUCAÇÃO BITCOIN</Text>
+              <Text style={styles.tagBadgeText}>EDUCAÇÃO BITCOIN • D&D RPG</Text>
             </View>
             <Text style={styles.heroTitle}>Sua Jornada para a Soberania</Text>
             <Text style={styles.heroSubtitle}>
-              Estude conceitos sólidos, gire a roleta e ganhe satoshinhos a cada lição!
+              Estude conceitos sólidos, role o Dado D20 de D&D e ganhe satoshinhos a cada lição!
             </Text>
           </View>
 
@@ -43,25 +44,27 @@ export default function LearnScreen() {
           </View>
         </View>
 
-        {/* Lucky Wheel Alert Banner if spins available */}
-        {userState.spinsAvailable > 0 && (
+        {/* D20 Dice Alert Banner if rolls available */}
+        {rollsLeft > 0 && (
           <TouchableOpacity
-            style={styles.wheelAlertCard}
+            style={styles.diceAlertCard}
             onPress={() => {
-              triggerHaptic('impact');
-              router.push('/wheel');
+              triggerHaptic('heavy');
+              router.push('/dice');
             }}
             activeOpacity={0.85}
           >
-            <View style={styles.wheelAlertLeft}>
-              <View style={styles.wheelAlertIcon}>
-                <Ionicons name="disc" size={24} color="#000000" />
+            <View style={styles.diceAlertLeft}>
+              <View style={styles.diceAlertIcon}>
+                <MaterialCommunityIcons name="dice-d20" size={26} color="#000000" />
               </View>
               <View>
-                <Text style={styles.wheelAlertTitle}>
-                  Você tem {userState.spinsAvailable} giro{userState.spinsAvailable > 1 ? 's' : ''} esperando!
+                <Text style={styles.diceAlertTitle}>
+                  Você tem {rollsLeft} rolagem{rollsLeft > 1 ? 'ns' : ''} de D20!
                 </Text>
-                <Text style={styles.wheelAlertDesc}>Gire a roleta agora para coletar satoshis 🎁</Text>
+                <Text style={styles.diceAlertDesc}>
+                  Role o dado estilo Baldur's Gate e colete satoshinhos 🎲
+                </Text>
               </View>
             </View>
             <Ionicons name="arrow-forward" size={18} color="#000000" />
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-  wheelAlertCard: {
+  diceAlertCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -165,13 +168,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
   },
-  wheelAlertLeft: {
+  diceAlertLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
   },
-  wheelAlertIcon: {
+  diceAlertIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -179,12 +182,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wheelAlertTitle: {
+  diceAlertTitle: {
     color: '#000000',
     fontSize: 14,
     fontWeight: '800',
   },
-  wheelAlertDesc: {
+  diceAlertDesc: {
     color: 'rgba(0, 0, 0, 0.75)',
     fontSize: 11,
     fontWeight: '600',

@@ -1,19 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
-import { UserState, Transaction } from '@/types';
+import { UserState, Transaction, D20Result } from '@/types';
 import { loadStoredUserState, saveStoredUserState, INITIAL_USER_STATE } from '@/services/storage';
 import { MODULES } from '@/constants/curriculum';
-import { BADGES } from '@/constants/badges';
-
-export const WHEEL_PRIZES = [
-  { sats: 21, weight: 30, color: '#F7931A', label: '21 sats' },
-  { sats: 50, weight: 30, color: '#3B82F6', label: '50 sats' },
-  { sats: 100, weight: 20, color: '#10B981', label: '100 sats' },
-  { sats: 210, weight: 12, color: '#8B5CF6', label: '210 sats' },
-  { sats: 500, weight: 6, color: '#EC4899', label: '500 sats' },
-  { sats: 1000, weight: 2, color: '#FFB800', label: '1000 sats 🏆' },
-];
 
 interface WithdrawalParams {
   method: 'lightning' | 'onchain';
@@ -25,8 +15,8 @@ interface WithdrawalParams {
 interface GameContextType {
   userState: UserState;
   isLoading: boolean;
-  completeLesson: (lessonId: string, earnedXp: number) => Promise<{ unlockedBadges: string[]; gainedSpins: number }>;
-  spinWheel: () => Promise<{ prizeSats: number; prizeIndex: number; newTotalSats: number }>;
+  completeLesson: (lessonId: string, earnedXp: number) => Promise<{ unlockedBadges: string[]; gainedRolls: number }>;
+  rollD20: () => Promise<D20Result>;
   simulateWithdrawal: (params: WithdrawalParams) => Promise<{ success: boolean; txHash?: string; error?: string }>;
   resetProgress: () => Promise<void>;
   updateUserName: (name: string) => Promise<void>;
@@ -34,20 +24,22 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-export const triggerHaptic = (type: 'success' | 'warning' | 'impact' | 'selection' = 'impact') => {
+export const triggerHaptic = (type: 'success' | 'warning' | 'impact' | 'selection' | 'heavy' = 'impact') => {
   if (Platform.OS === 'web') return;
   try {
     if (type === 'success') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else if (type === 'warning') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } else if (type === 'heavy') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } else if (type === 'selection') {
       Haptics.selectionAsync();
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   } catch {
-    // Ignore on unsupported devices
+    // Graceful fallback
   }
 };
 
@@ -59,7 +51,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const init = async () => {
       const stored = await loadStoredUserState();
       
-      // Calculate streak
       const today = new Date().toISOString().slice(0, 10);
       let updatedStreak = stored.streakDays || 1;
       
@@ -99,10 +90,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const completeLesson = async (
     lessonId: string,
     earnedXp: number
-  ): Promise<{ unlockedBadges: string[]; gainedSpins: number }> => {
+  ): Promise<{ unlockedBadges: string[]; gainedRolls: number }> => {
     triggerHaptic('success');
     let newlyUnlockedBadges: string[] = [];
-    let spinsAwarded = 1; // Base 1 spin for lesson completion
+    let rollsAwarded = 1; // 1 D20 roll per lesson completed
 
     setUserState(prev => {
       const alreadyCompleted = prev.completedLessonIds.includes(lessonId);
@@ -128,7 +119,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (allDone && !newUnlockedBadges.includes(mod.badgeId)) {
           newUnlockedBadges.push(mod.badgeId);
           newlyUnlockedBadges.push(mod.badgeId);
-          spinsAwarded += 2; // Extra bonus spins for completing a full module!
+          rollsAwarded += 2; // Extra bonus D20 rolls for completing a full module!
         }
       });
 
@@ -136,7 +127,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...prev,
         xp: newXp,
         level: newLevel,
-        spinsAvailable: prev.spinsAvailable + spinsAwarded,
+        diceRollsAvailable: (prev.diceRollsAvailable ?? 0) + rollsAwarded,
         completedLessonIds: updatedCompleted,
         unlockedBadgeIds: newUnlockedBadges,
       };
@@ -145,45 +136,82 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return nextState;
     });
 
-    return { unlockedBadges: newlyUnlockedBadges, gainedSpins: spinsAwarded };
+    return { unlockedBadges: newlyUnlockedBadges, gainedRolls: rollsAwarded };
   };
 
-  const spinWheel = async (): Promise<{ prizeSats: number; prizeIndex: number; newTotalSats: number }> => {
-    if (userState.spinsAvailable <= 0) {
-      throw new Error('Você não possui giros disponíveis. Complete lições para ganhar novos giros!');
+  const rollD20 = async (): Promise<D20Result> => {
+    if (userState.diceRollsAvailable <= 0) {
+      throw new Error('Você não possui rolagens de D20 disponíveis. Conclua lições para ganhar rolagens!');
     }
 
-    triggerHaptic('impact');
+    triggerHaptic('heavy');
 
-    // Weighted random selection
-    const totalWeight = WHEEL_PRIZES.reduce((acc, p) => acc + p.weight, 0);
-    let rand = Math.random() * totalWeight;
-    let selectedIndex = 0;
+    // Roll 1 to 20
+    const baseRoll = Math.floor(Math.random() * 20) + 1;
 
-    for (let i = 0; i < WHEEL_PRIZES.length; i++) {
-      if (rand < WHEEL_PRIZES[i].weight) {
-        selectedIndex = i;
-        break;
-      }
-      rand -= WHEEL_PRIZES[i].weight;
+    // Baldur's Gate style Proficiency/Streak modifier
+    const proficiencyBonus = Math.min(4, Math.floor(userState.level / 2));
+    const streakBonus = userState.streakDays >= 2 ? 1 : 0;
+    const totalModifier = proficiencyBonus + streakBonus;
+    const total = baseRoll + totalModifier;
+
+    let tier: D20Result['tier'];
+    let tierTitle = '';
+    let tierDescription = '';
+    let baseSats = 0;
+    let bonusSats = 0;
+
+    if (baseRoll === 20) {
+      tier = 'crit_success';
+      tierTitle = '20 NATURAL! SUCESSO CRÍTICO LENDÁRIO! ⚔️🔥';
+      tierDescription = 'O consenso absoluto da rede sorriu para você! Prêmio Máximo de Satoshi!';
+      baseSats = 1000;
+      bonusSats = totalModifier * 50;
+    } else if (baseRoll === 1) {
+      tier = 'crit_fail';
+      tierTitle = '1 NATURAL! Falha Crítica... mas Satoshi tem piedade! 🧙‍♂️';
+      tierDescription = 'No Bitcoin até o erro gera aprendizado e satoshinhos!';
+      baseSats = 21;
+      bonusSats = 0;
+    } else if (total >= 18) {
+      tier = 'superior';
+      tierTitle = 'Sucesso Crítico Superior! 🛡️';
+      tierDescription = 'Prova de Trabalho executada com excelência máxima!';
+      baseSats = 210;
+      bonusSats = totalModifier * 20;
+    } else if (total >= 12) {
+      tier = 'solid';
+      tierTitle = 'Sucesso Sólido! ⚡';
+      tierDescription = 'Transação validada e propagada pelos nós da rede.';
+      baseSats = 100;
+      bonusSats = totalModifier * 10;
+    } else {
+      tier = 'common';
+      tierTitle = 'Sucesso Comum! 🪙';
+      tierDescription = 'Micropagamento efetuado com sucesso via Lightning!';
+      baseSats = 50;
+      bonusSats = totalModifier * 5;
     }
 
-    const wonPrize = WHEEL_PRIZES[selectedIndex];
+    const totalEarned = baseSats + bonusSats;
+    const nextTotalSats = userState.satsBalance + totalEarned;
+
     const newTx: Transaction = {
-      id: `tx-spin-${Date.now()}`,
+      id: `tx-dice-${Date.now()}`,
       type: 'reward',
-      amount: wonPrize.sats,
-      description: `Giro da Roleta da Sorte (+${wonPrize.sats} sats) 🎡`,
+      amount: totalEarned,
+      description: `Rolagem D20 [D${baseRoll}${totalModifier > 0 ? `+${totalModifier}` : ''} = ${total}] (+${totalEarned} sats) 🎲`,
       timestamp: Date.now(),
       status: 'confirmed',
     };
 
-    let nextTotalSats = userState.satsBalance + wonPrize.sats;
-
     setUserState(prev => {
       const newBadges = [...prev.unlockedBadgeIds];
-      if (!newBadges.includes('badge-first-spin')) {
-        newBadges.push('badge-first-spin');
+      if (!newBadges.includes('badge-first-roll')) {
+        newBadges.push('badge-first-roll');
+      }
+      if (baseRoll === 20 && !newBadges.includes('badge-nat-20')) {
+        newBadges.push('badge-nat-20');
       }
       if (nextTotalSats >= 500 && !newBadges.includes('badge-wealthy')) {
         newBadges.push('badge-wealthy');
@@ -195,7 +223,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const nextState: UserState = {
         ...prev,
         satsBalance: nextTotalSats,
-        spinsAvailable: Math.max(0, prev.spinsAvailable - 1),
+        diceRollsAvailable: Math.max(0, (prev.diceRollsAvailable ?? 1) - 1),
         unlockedBadgeIds: newBadges,
         transactions: [newTx, ...prev.transactions],
       };
@@ -205,8 +233,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return {
-      prizeSats: wonPrize.sats,
-      prizeIndex: selectedIndex,
+      baseRoll,
+      modifier: totalModifier,
+      modifierName: `Nível ${userState.level} (+${proficiencyBonus}) ${streakBonus > 0 ? '+ Streak (+1)' : ''}`,
+      total,
+      tier,
+      tierTitle,
+      tierDescription,
+      satsPrize: baseSats,
+      bonusSats,
+      totalSatsEarned: totalEarned,
       newTotalSats: nextTotalSats,
     };
   };
@@ -273,7 +309,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserName = async (name: string) => {
-    await updateStateAndPersist(prev => ({ ...prev, name: name.trim() || 'Bitcoiner' }));
+    await updateStateAndPersist(prev => ({ ...prev, name: name.trim() || 'Aventureiro Bitcoin' }));
   };
 
   return (
@@ -282,7 +318,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         userState,
         isLoading,
         completeLesson,
-        spinWheel,
+        rollD20,
         simulateWithdrawal,
         resetProgress,
         updateUserName,

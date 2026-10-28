@@ -79,12 +79,27 @@ export interface EcosystemTool {
   recommendedFor: string;
 }
 
+export interface D20Result {
+  baseRoll: number;
+  modifier: number;
+  modifierName: string;
+  total: number;
+  tier: 'crit_success' | 'superior' | 'solid' | 'common' | 'crit_fail';
+  tierTitle: string;
+  tierDescription: string;
+  satsPrize: number;
+  bonusSats: number;
+  totalSatsEarned: number;
+  newTotalSats: number;
+}
+
 export interface UserState {
   name: string;
   xp: number;
   level: number;
   satsBalance: number;
-  spinsAvailable: number;
+  diceRollsAvailable: number;
+  spinsAvailable?: number; // legacy alias
   streakDays: number;
   completedLessonIds: string[];
   unlockedBadgeIds: string[];

@@ -37,10 +37,17 @@ export const BADGES: Badge[] = [
     category: 'curriculum',
   },
   {
-    id: 'badge-first-spin',
-    title: 'Roda da Fortuna',
-    description: 'Girou a roleta de satoshis pela primeira vez após uma lição!',
-    icon: 'disc-outline',
+    id: 'badge-first-roll',
+    title: 'Iniciativa D20',
+    description: 'Rolou o Dado D20 de D&D pela primeira vez após uma lição!',
+    icon: 'dice-outline',
+    category: 'gamification',
+  },
+  {
+    id: 'badge-nat-20',
+    title: 'Vinte Natural! 🎲🔥',
+    description: 'Rolou um 20 natural lendário no D20 e conquistou o Sucesso Crítico!',
+    icon: 'flame-outline',
     category: 'gamification',
   },
   {
@@ -53,7 +60,7 @@ export const BADGES: Badge[] = [
   {
     id: 'badge-whale',
     title: 'Baleia de Satoshis',
-    description: 'Acumulou mais de 1.500 satoshinhos através de estudos e sorte na roleta!',
+    description: 'Acumulou mais de 1.500 satoshinhos através de estudos e rolagens críticas!',
     icon: 'trophy-outline',
     category: 'wallet',
   },

@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { HeaderStats } from '@/components/HeaderStats';
-import { LuckyWheel } from '@/components/LuckyWheel';
+import { D20Dice } from '@/components/D20Dice';
 import { BitcoinColors } from '@/constants/theme';
 
-export default function WheelScreen() {
+export default function DiceScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderStats />
@@ -13,40 +13,41 @@ export default function WheelScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerBox}>
           <View style={styles.iconTag}>
-            <Ionicons name="gift" size={16} color={BitcoinColors.bitcoinGold} />
-            <Text style={styles.iconTagText}>RECOMPENSAS EDUCATIVAS</Text>
+            <MaterialCommunityIcons name="dice-d20" size={16} color={BitcoinColors.bitcoinGold} />
+            <Text style={styles.iconTagText}>ESTILO BALDUR'S GATE & D&D</Text>
           </View>
-          <Text style={styles.title}>Roleta dos Satoshis</Text>
+          <Text style={styles.title}>O Dado do Destino (D20)</Text>
           <Text style={styles.subtitle}>
-            Conquiste conhecimento, gire a roleta e acumule satoshinhos reais em sua carteira virtual!
+            Invoque o poder do consenso descentralizado. Role o D20 e colete satoshinhos a cada conquista!
           </Text>
         </View>
 
-        {/* Lucky Wheel Component */}
-        <LuckyWheel />
+        {/* D20 Component */}
+        <D20Dice />
 
-        {/* How it works info card */}
+        {/* Rules & Modifiers Card */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Como Ganhar Mais Giros?</Text>
+          <Text style={styles.infoTitle}>Como Ganhar Mais Rolagens e Bônus?</Text>
 
           <View style={styles.infoRow}>
             <Ionicons name="checkmark-circle" size={18} color={BitcoinColors.success} />
             <Text style={styles.infoText}>
-              <Text style={styles.infoHighlight}>+1 Giro </Text> a cada lição concluída com sucesso.
+              <Text style={styles.infoHighlight}>+1 Rolagem </Text> a cada lição do currículo concluída.
             </Text>
           </View>
 
           <View style={styles.infoRow}>
             <Ionicons name="trophy" size={18} color={BitcoinColors.bitcoinGold} />
             <Text style={styles.infoText}>
-              <Text style={styles.infoHighlight}>+2 Giros Bônus </Text> ao finalizar todos os módulos de uma trilha.
+              <Text style={styles.infoHighlight}>+2 Rolagens Bônus </Text> ao finalizar um módulo completo.
             </Text>
           </View>
 
           <View style={styles.infoRow}>
             <Ionicons name="flame" size={18} color="#FF6B35" />
             <Text style={styles.infoText}>
-              Mantenha seu <Text style={styles.infoHighlight}>Streak Diário</Text> de estudos ativo.
+              <Text style={styles.infoHighlight}>Bônus de Proficiência: </Text>
+              Seu Nível e Streak adicionam modificadores positivos (+1, +2, +3...) ao resultado do dado!
             </Text>
           </View>
         </View>
@@ -74,15 +75,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: 'rgba(255, 184, 0, 0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 8,
     marginBottom: 8,
   },
   iconTagText: {
     color: BitcoinColors.bitcoinGold,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     letterSpacing: 0.8,
   },
   title: {
@@ -103,10 +104,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     backgroundColor: BitcoinColors.surface,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: BitcoinColors.border,
     gap: 12,
+    marginTop: 10,
   },
   infoTitle: {
     color: '#FFFFFF',
