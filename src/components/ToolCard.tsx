@@ -17,7 +17,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
       if (canOpen) {
         await Linking.openURL(tool.url);
       }
-    } catch (e) {
+    } catch {
       console.warn('Não foi possível abrir o link:', tool.url);
     }
   };

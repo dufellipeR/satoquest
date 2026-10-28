@@ -63,7 +63,7 @@ export default function LearnScreen() {
                   Você tem {rollsLeft} rolagem{rollsLeft > 1 ? 'ns' : ''} de D20!
                 </Text>
                 <Text style={styles.diceAlertDesc}>
-                  Role o dado estilo Baldur's Gate e colete satoshinhos 🎲
+                  {"Role o dado estilo Baldur's Gate e colete satoshinhos 🎲"}
                 </Text>
               </View>
             </View>

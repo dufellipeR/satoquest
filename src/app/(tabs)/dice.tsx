@@ -14,7 +14,7 @@ export default function DiceScreen() {
         <View style={styles.headerBox}>
           <View style={styles.iconTag}>
             <MaterialCommunityIcons name="dice-d20" size={16} color={BitcoinColors.bitcoinGold} />
-            <Text style={styles.iconTagText}>ESTILO BALDUR'S GATE & D&D</Text>
+            <Text style={styles.iconTagText}>{"ESTILO BALDUR'S GATE & D&D"}</Text>
           </View>
           <Text style={styles.title}>O Dado do Destino (D20)</Text>
           <Text style={styles.subtitle}>
