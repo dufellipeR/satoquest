@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
-  Easing,
   Modal,
   Dimensions,
 } from 'react-native';
@@ -14,23 +12,20 @@ import { useRouter } from 'expo-router';
 import { useGame, triggerHaptic } from '@/context/GameContext';
 import { BitcoinColors } from '@/constants/theme';
 import { D20Result } from '@/types';
+import { ThreeD20Canvas, ThreeD20Ref } from './ThreeD20Canvas';
 
 const { width } = Dimensions.get('window');
-const DIE_SIZE = Math.min(width - 64, 260);
+const DIE_SIZE = Math.min(width - 48, 290);
 
 export const D20Dice: React.FC = () => {
   const { userState, rollD20 } = useGame();
   const router = useRouter();
 
-  const [isRolling, setIsRolling] = useState(false);
-  const [displayNumber, setDisplayNumber] = useState<number | string>(20);
-  const [rollResult, setRollResult] = useState<D20Result | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const canvasRef = useRef<ThreeD20Ref>(null);
 
-  // Animated values
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+  const [isRolling, setIsRolling] = useState(false);
+  const [currentResult, setCurrentResult] = useState<D20Result | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const handleRoll = async () => {
     if (isRolling || userState.diceRollsAvailable <= 0) return;
@@ -39,91 +34,54 @@ export const D20Dice: React.FC = () => {
       setIsRolling(true);
       triggerHaptic('heavy');
 
-      // Start looping tumble animation
-      rotateAnim.setValue(0);
-      Animated.timing(rotateAnim, {
-        toValue: 8, // Multiple full spins
-        duration: 2600,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        useNativeDriver: true,
-      }).start();
-
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.25,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1.05,
-          friction: 3,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Cycle numbers rapidly during roll for dramatic effect
-      let tick = 0;
-      const interval = setInterval(() => {
-        tick++;
-        const tempRandom = Math.floor(Math.random() * 20) + 1;
-        setDisplayNumber(tempRandom);
-        triggerHaptic('selection');
-
-        if (tick > 18) {
-          clearInterval(interval);
-        }
-      }, 120);
-
-      // Call game logic
+      // 1. Calculate roll result in game context
       const result = await rollD20();
+      setCurrentResult(result);
 
-      setTimeout(() => {
-        setDisplayNumber(result.baseRoll);
-        setIsRolling(false);
-        setRollResult(result);
+      // 2. Trigger real 3D WebGL roll animation!
+      canvasRef.current?.roll(result.baseRoll);
 
-        if (result.baseRoll === 20) {
-          triggerHaptic('success');
-          // Pulse glow
-          Animated.timing(glowAnim, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: false,
-          }).start();
-        } else if (result.baseRoll === 1) {
-          triggerHaptic('warning');
-        } else {
-          triggerHaptic('success');
-        }
+      // Fallback timer in case webview message drops (safety timeout)
+      const safetyTimer = setTimeout(() => {
+        handleRollFinished(result);
+      }, 3000);
 
-        // Open Baldur's Gate style result modal after brief landing impact
-        setTimeout(() => {
-          setModalVisible(true);
-        }, 500);
-      }, 2600);
+      (handleRoll as any).safetyTimer = safetyTimer;
     } catch (err: any) {
       setIsRolling(false);
       console.warn('Erro ao rolar D20:', err.message);
     }
   };
 
-  const spinInterpolation = rotateAnim.interpolate({
-    inputRange: [0, 8],
-    outputRange: ['0deg', '1440deg'],
-  });
+  const handleRollFinished = (result: D20Result) => {
+    if ((handleRoll as any).safetyTimer) {
+      clearTimeout((handleRoll as any).safetyTimer);
+    }
 
-  const isNat20 = displayNumber === 20;
-  const isNat1 = displayNumber === 1;
+    setIsRolling(false);
+
+    if (result.baseRoll === 20) {
+      triggerHaptic('success');
+    } else if (result.baseRoll === 1) {
+      triggerHaptic('warning');
+    } else {
+      triggerHaptic('success');
+    }
+
+    setTimeout(() => {
+      setModalVisible(true);
+    }, 400);
+  };
+
+  const handleCanvasRollComplete = (faceNumber: number) => {
+    if (currentResult) {
+      handleRollFinished(currentResult);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Dice Counter Banner */}
+      {/* Rolls Counter Badge */}
       <View style={styles.rollsCounterCard}>
         <MaterialCommunityIcons name="dice-d20" size={20} color="#FFD700" />
         <Text style={styles.rollsCounterText}>
@@ -133,9 +91,9 @@ export const D20Dice: React.FC = () => {
         </Text>
       </View>
 
-      {/* Baldur's Gate Arcane Dice Arena */}
+      {/* Baldur's Gate 3 3D WebGL Arena */}
       <View style={styles.arenaContainer}>
-        {/* Outer Arcane Rune Ring */}
+        {/* Arcane Rune Ring */}
         <View style={styles.runeRing}>
           <View style={styles.runeDotTop} />
           <View style={styles.runeDotBottom} />
@@ -143,48 +101,19 @@ export const D20Dice: React.FC = () => {
           <View style={styles.runeDotRight} />
         </View>
 
-        {/* 3D-styled Animated D20 Die */}
-        <Animated.View
-          style={[
-            styles.dieWrapper,
-            {
-              transform: [
-                { rotate: spinInterpolation },
-                { scale: scaleAnim },
-              ],
-            },
-          ]}
-        >
-          {/* Icosahedron Facet Outer Frame */}
-          <View
-            style={[
-              styles.d20OuterFrame,
-              isNat20 && styles.d20CritGoldGlow,
-              isNat1 && styles.d20CritFailGlow,
-            ]}
-          >
-            {/* Facet Geometries */}
-            <View style={styles.facetTopLeft} />
-            <View style={styles.facetTopRight} />
-            <View style={styles.facetBottom} />
+        {/* Real 3D WebGL Three.js D20 Canvas */}
+        <View style={styles.canvasContainer}>
+          <ThreeD20Canvas
+            ref={canvasRef}
+            size={DIE_SIZE}
+            onRollComplete={handleCanvasRollComplete}
+          />
+        </View>
 
-            {/* Inner Center Pentagonal Face */}
-            <View style={styles.d20FaceCenter}>
-              <Text
-                style={[
-                  styles.dieNumberText,
-                  isNat20 && styles.dieNumberTextCrit,
-                  isNat1 && styles.dieNumberTextFail,
-                ]}
-              >
-                {displayNumber}
-              </Text>
-              <Text style={styles.dieSubtitle}>
-                {isNat20 ? 'NAT 20' : isNat1 ? 'FALHA' : 'D20'}
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
+        {/* Dynamic 3D Tag */}
+        <View style={styles.threeDTag}>
+          <Text style={styles.threeDTagText}>3D REAL • THREE.JS</Text>
+        </View>
       </View>
 
       {/* Roll Action Button */}
@@ -204,14 +133,14 @@ export const D20Dice: React.FC = () => {
         />
         <Text style={styles.rollButtonText}>
           {isRolling
-            ? 'ROLANDO D20...'
+            ? 'ROLANDO D20 EM 3D...'
             : userState.diceRollsAvailable > 0
             ? 'ROLAR DADO D20'
             : 'SEM ROLAGENS DISPONÍVEIS'}
         </Text>
       </TouchableOpacity>
 
-      {/* D&D Tiers Breakdown Table */}
+      {/* D&D Tiers Breakdown Guide */}
       <View style={styles.tierGuideCard}>
         <Text style={styles.tierGuideTitle}>Tabela de Recompensas D&D</Text>
         <View style={styles.tierList}>
@@ -265,30 +194,30 @@ export const D20Dice: React.FC = () => {
             <View
               style={[
                 styles.crestCircle,
-                rollResult?.baseRoll === 20 && styles.crestCircleCrit,
+                currentResult?.baseRoll === 20 && styles.crestCircleCrit,
               ]}
             >
               <MaterialCommunityIcons
                 name="dice-d20"
                 size={40}
-                color={rollResult?.baseRoll === 20 ? '#FFD700' : BitcoinColors.bitcoin}
+                color={currentResult?.baseRoll === 20 ? '#FFD700' : BitcoinColors.bitcoin}
               />
             </View>
 
-            <Text style={styles.modalTierTitle}>{rollResult?.tierTitle}</Text>
-            <Text style={styles.modalTierDesc}>{rollResult?.tierDescription}</Text>
+            <Text style={styles.modalTierTitle}>{currentResult?.tierTitle}</Text>
+            <Text style={styles.modalTierDesc}>{currentResult?.tierDescription}</Text>
 
-            {/* Baldur's Gate Breakdown Box */}
+            {/* Breakdown Box */}
             <View style={styles.calcBox}>
               <View style={styles.calcRow}>
-                <Text style={styles.calcLabel}>Rolagem no D20:</Text>
-                <Text style={styles.calcValueBold}>{rollResult?.baseRoll}</Text>
+                <Text style={styles.calcLabel}>Rolagem no D20 3D:</Text>
+                <Text style={styles.calcValueBold}>{currentResult?.baseRoll}</Text>
               </View>
 
-              {rollResult && rollResult.modifier > 0 && (
+              {currentResult && currentResult.modifier > 0 && (
                 <View style={styles.calcRow}>
                   <Text style={styles.calcLabel}>+ Bônus de Proficiência:</Text>
-                  <Text style={styles.calcBonus}>+{rollResult.modifier}</Text>
+                  <Text style={styles.calcBonus}>+{currentResult.modifier}</Text>
                 </View>
               )}
 
@@ -296,14 +225,14 @@ export const D20Dice: React.FC = () => {
 
               <View style={styles.calcRow}>
                 <Text style={styles.calcTotalLabel}>Resultado Final:</Text>
-                <Text style={styles.calcTotalValue}>{rollResult?.total}</Text>
+                <Text style={styles.calcTotalValue}>{currentResult?.total}</Text>
               </View>
             </View>
 
             {/* Satoshis Won Banner */}
             <View style={styles.satRewardBanner}>
               <Ionicons name="logo-bitcoin" size={26} color={BitcoinColors.bitcoin} />
-              <Text style={styles.satRewardText}>+{rollResult?.totalSatsEarned} SATS</Text>
+              <Text style={styles.satRewardText}>+{currentResult?.totalSatsEarned} SATS</Text>
             </View>
 
             {/* Action Buttons */}
@@ -335,7 +264,7 @@ export const D20Dice: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   rollsCounterCard: {
@@ -346,7 +275,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 24,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: BitcoinColors.border,
   },
@@ -361,15 +290,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   runeRing: {
     position: 'absolute',
-    width: DIE_SIZE + 24,
-    height: DIE_SIZE + 24,
-    borderRadius: (DIE_SIZE + 24) / 2,
+    width: DIE_SIZE + 10,
+    height: DIE_SIZE + 10,
+    borderRadius: (DIE_SIZE + 10) / 2,
     borderWidth: 2,
-    borderColor: 'rgba(247, 147, 26, 0.25)',
+    borderColor: 'rgba(247, 147, 26, 0.2)',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -406,96 +335,29 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: BitcoinColors.bitcoin,
   },
-  dieWrapper: {
+  canvasContainer: {
     width: DIE_SIZE,
     height: DIE_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 5,
   },
-  d20OuterFrame: {
-    width: DIE_SIZE - 20,
-    height: DIE_SIZE - 20,
-    backgroundColor: '#161B26',
-    borderRadius: 36,
-    borderWidth: 5,
-    borderColor: BitcoinColors.bitcoin,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: BitcoinColors.bitcoin,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  d20CritGoldGlow: {
-    borderColor: '#FFD700',
-    backgroundColor: '#2A1F0A',
-    shadowColor: '#FFD700',
-    shadowOpacity: 0.9,
-    shadowRadius: 24,
-  },
-  d20CritFailGlow: {
-    borderColor: '#EF4444',
-    shadowColor: '#EF4444',
-  },
-  facetTopLeft: {
+  threeDTag: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '50%',
-    height: '50%',
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  facetTopRight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: '50%',
-    height: '50%',
-    borderLeftWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  facetBottom: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: '40%',
-    borderTopWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  d20FaceCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    bottom: 2,
+    backgroundColor: 'rgba(20, 24, 36, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 184, 0, 0.3)',
     zIndex: 10,
   },
-  dieNumberText: {
-    color: '#FFFFFF',
-    fontSize: 68,
+  threeDTagText: {
+    color: '#FFB800',
+    fontSize: 9,
     fontWeight: '900',
-    letterSpacing: -1,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 6,
-  },
-  dieNumberTextCrit: {
-    color: '#FFD700',
-    textShadowColor: 'rgba(255, 215, 0, 0.6)',
-    textShadowRadius: 16,
-  },
-  dieNumberTextFail: {
-    color: '#EF4444',
-  },
-  dieSubtitle: {
-    color: BitcoinColors.bitcoin,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 2,
-    marginTop: -4,
+    letterSpacing: 0.8,
   },
   rollButton: {
     flexDirection: 'row',
@@ -530,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: BitcoinColors.surface,
     padding: 16,
     borderRadius: 18,
-    marginTop: 24,
+    marginTop: 20,
     borderWidth: 1,
     borderColor: BitcoinColors.border,
   },
