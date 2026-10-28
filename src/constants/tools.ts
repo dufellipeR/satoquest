@@ -46,7 +46,7 @@ export const ECOSYSTEM_TOOLS: EcosystemTool[] = [
     whyUseIt: 'Combina a soberania da autocustódia com a facilidade de uso em pagamentos instantâneos.',
     difficulty: 'Intermediário',
     url: 'https://phoenix.acinq.co',
-    iconName: 'bolt',
+    iconName: 'flash',
     recommendedFor: 'Usuários que desejam custódia real de seus canais Lightning no smartphone.',
   },
   {

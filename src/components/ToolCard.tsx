@@ -49,7 +49,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
 
       <View style={styles.titleRow}>
         <View style={styles.iconContainer}>
-          <Ionicons name={tool.iconName as any || 'globe-outline'} size={24} color={BitcoinColors.bitcoin} />
+          <Ionicons name={tool.iconName} size={24} color={BitcoinColors.bitcoin} />
         </View>
         <View style={styles.titleGroup}>
           <Text style={styles.toolName}>{tool.name}</Text>
