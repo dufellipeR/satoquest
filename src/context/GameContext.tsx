@@ -24,22 +24,48 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-export const triggerHaptic = (type: 'success' | 'warning' | 'impact' | 'selection' | 'heavy' = 'impact') => {
+type HapticType = 'success' | 'warning' | 'impact' | 'selection' | 'heavy';
+
+// No Android o módulo nativo do Expo Go não expõe impactAsync/notificationAsync
+// (lançam UnavailabilityError), e uma promessa rejeitada NÃO é pega por um
+// try/catch síncrono — era o que gerava o "Uncaught (in promise)" a cada toque.
+// performAndroidHapticsAsync é a API equivalente suportada no Android.
+const ANDROID_HAPTICS: Record<HapticType, Haptics.AndroidHaptics> = {
+  success: Haptics.AndroidHaptics.Confirm,
+  warning: Haptics.AndroidHaptics.Reject,
+  impact: Haptics.AndroidHaptics.Context_Click,
+  selection: Haptics.AndroidHaptics.Clock_Tick,
+  heavy: Haptics.AndroidHaptics.Long_Press,
+};
+
+const ignoreHapticError = (promise?: Promise<unknown>) => {
+  if (promise && typeof promise.catch === 'function') {
+    promise.catch(() => {});
+  }
+};
+
+export const triggerHaptic = (type: HapticType = 'impact') => {
   if (Platform.OS === 'web') return;
+
   try {
+    if (Platform.OS === 'android') {
+      ignoreHapticError(Haptics.performAndroidHapticsAsync(ANDROID_HAPTICS[type]));
+      return;
+    }
+
     if (type === 'success') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      ignoreHapticError(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
     } else if (type === 'warning') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      ignoreHapticError(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
     } else if (type === 'heavy') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      ignoreHapticError(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
     } else if (type === 'selection') {
-      Haptics.selectionAsync();
+      ignoreHapticError(Haptics.selectionAsync());
     } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      ignoreHapticError(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
     }
   } catch {
-    // Graceful fallback
+    // Haptics são opcionais: sem suporte no aparelho, o app segue sem feedback.
   }
 };
 
