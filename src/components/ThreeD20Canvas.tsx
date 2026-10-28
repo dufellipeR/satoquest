@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { THREE_JS_SOURCE } from '@/constants/threeSource';
 
 interface ThreeD20CanvasProps {
   size?: number;
@@ -12,18 +13,18 @@ export interface ThreeD20Ref {
   roll: (targetNumber: number) => void;
 }
 
-const THREE_HTML = `
+const buildHtml = () => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
       width: 100%;
       height: 100%;
-      background: transparent;
+      background: transparent !important;
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -32,48 +33,67 @@ const THREE_HTML = `
     #canvas-container {
       width: 100%;
       height: 100%;
-      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     canvas {
       display: block;
-      width: 100% !important;
-      height: 100% !important;
+      background: transparent !important;
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    ${THREE_JS_SOURCE}
+  </script>
 </head>
 <body>
   <div id="canvas-container"></div>
 
   <script>
+    window.onerror = function(msg, url, line) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: msg + ' (' + line + ')' }));
+      }
+    };
+
     let scene, camera, renderer, dieMesh, wireframeMesh;
-    let facePlanes = [];
     let particles;
     let isRolling = false;
     let rollStartTime = 0;
     const ROLL_DURATION = 2400; // ms
-    let startQuat = new THREE.Quaternion();
-    let targetQuat = new THREE.Quaternion();
+    let startQuat, targetQuat;
     let spinVelocity = { x: 0.01, y: 0.015, z: 0.005 };
 
     const container = document.getElementById('canvas-container');
-    const width = container.clientWidth || 300;
-    const height = container.clientHeight || 300;
+    let width = window.innerWidth || 280;
+    let height = window.innerHeight || 280;
+    if (width < 50) width = 280;
+    if (height < 50) height = 280;
 
     // 1. Scene & Camera
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
     camera.position.set(0, 0, 5.2);
 
-    // 2. Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 2, 2.5));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    container.appendChild(renderer.domElement);
+    startQuat = new THREE.Quaternion();
+    targetQuat = new THREE.Quaternion();
+
+    // 2. Renderer (with alpha)
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 2, 2.5));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.setClearColor(0x000000, 0); // 100% transparent
+      container.appendChild(renderer.domElement);
+    } catch (e) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: 'WebGL Init Failed: ' + e.message }));
+      }
+    }
 
     // 3. Lighting (Baldur's Gate 3 Golden Arcane Atmosphere)
-    const ambientLight = new THREE.AmbientLight(0xffeedd, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffeedd, 1.4);
     scene.add(ambientLight);
 
     const dirLight1 = new THREE.DirectionalLight(0xffd700, 2.2);
@@ -118,7 +138,6 @@ const THREE_HTML = `
     const posAttr = geometry.attributes.position;
     const faceCount = posAttr.count / 3; // 20 faces
 
-    // Texture generator for numbers 1 to 20
     function createNumberTexture(num) {
       const cvs = document.createElement('canvas');
       cvs.width = 128;
@@ -127,7 +146,6 @@ const THREE_HTML = `
 
       ctx.clearRect(0, 0, 128, 128);
 
-      // Gold text with shadow
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = 'bold ' + (num === 20 || num === 1 ? '58px' : '52px') + ' system-ui, sans-serif';
@@ -152,7 +170,6 @@ const THREE_HTML = `
       return tex;
     }
 
-    // Number assignment (standard D20 mapping where opposites sum to 21)
     const d20Numbers = [20, 1, 14, 7, 18, 3, 16, 5, 12, 9, 19, 2, 13, 8, 17, 4, 15, 6, 11, 10];
     const faceNormals = [];
 
@@ -166,7 +183,6 @@ const THREE_HTML = `
       const normal = center.clone().normalize();
       faceNormals.push({ faceIndex: f, normal, number: d20Numbers[f % 20] });
 
-      // Create number sprite on face
       const num = d20Numbers[f % 20];
       const tex = createNumberTexture(num);
       const numMat = new THREE.MeshBasicMaterial({
@@ -178,16 +194,13 @@ const THREE_HTML = `
       const numGeo = new THREE.PlaneGeometry(0.85, 0.85);
       const numMesh = new THREE.Mesh(numGeo, numMat);
 
-      // Position slightly outside face
       numMesh.position.copy(normal.clone().multiplyScalar(radius * 1.03));
-      // Align with normal
       numMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
       dieMesh.add(numMesh);
-      facePlanes.push({ mesh: numMesh, number: num, normal });
     }
 
     // 6. Arcane Particles (Golden Stardust)
-    const particleCount = 70;
+    const particleCount = 60;
     const pGeo = new THREE.BufferGeometry();
     const pPositions = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount * 3; i += 3) {
@@ -222,16 +235,10 @@ const THREE_HTML = `
       isRolling = true;
       rollStartTime = performance.now();
 
-      // Find face of target number
       const targetFace = faceNormals.find(f => f.number === targetResultNum) || faceNormals[0];
-      
-      // We want targetFace.normal to end pointing at Vector3(0, 0, 1) (camera)
       targetQuat.setFromUnitVectors(targetFace.normal, new THREE.Vector3(0, 0, 1));
-
-      // Current quaternion
       startQuat.copy(dieMesh.quaternion);
 
-      // Random high tumble velocity
       spinVelocity.x = (Math.random() > 0.5 ? 1 : -1) * (0.35 + Math.random() * 0.2);
       spinVelocity.y = (Math.random() > 0.5 ? 1 : -1) * (0.35 + Math.random() * 0.2);
       spinVelocity.z = (Math.random() > 0.5 ? 1 : -1) * (0.25 + Math.random() * 0.15);
@@ -241,7 +248,6 @@ const THREE_HTML = `
     function animate(time) {
       requestAnimationFrame(animate);
 
-      // Floating gentle particle drift
       if (particles) {
         particles.rotation.y = time * 0.0003;
         particles.rotation.x = time * 0.00015;
@@ -252,19 +258,15 @@ const THREE_HTML = `
         const progress = Math.min(1.0, elapsed / ROLL_DURATION);
 
         if (progress < 0.7) {
-          // Wild tumble phase
           const speedFactor = 1.0 - (progress / 0.7) * 0.4;
           dieMesh.rotation.x += spinVelocity.x * speedFactor;
           dieMesh.rotation.y += spinVelocity.y * speedFactor;
           dieMesh.rotation.z += spinVelocity.z * speedFactor;
 
-          // Scale pulse / bounce
           const bounce = Math.sin(progress * Math.PI * 3) * 0.15;
           dieMesh.scale.set(1 + bounce, 1 + bounce, 1 + bounce);
         } else {
-          // Snap alignment phase (Cubic Slerp to target face)
           const alignProgress = (progress - 0.7) / 0.3;
-          // Smooth ease out
           const ease = 1 - Math.pow(1 - alignProgress, 3);
 
           dieMesh.quaternion.slerp(targetQuat, ease * 0.25);
@@ -276,7 +278,6 @@ const THREE_HTML = `
           dieMesh.quaternion.copy(targetQuat);
           dieMesh.scale.set(1.0, 1.0, 1.0);
 
-          // Notify React Native that roll completed!
           if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
             window.ReactNativeWebView.postMessage(JSON.stringify({
               type: 'ROLL_COMPLETE',
@@ -290,25 +291,30 @@ const THREE_HTML = `
           }
         }
       } else {
-        // Idle floating
         dieMesh.position.y = Math.sin(time * 0.002) * 0.06;
       }
 
-      renderer.render(scene, camera);
+      if (renderer) {
+        renderer.render(scene, camera);
+      }
     }
 
     requestAnimationFrame(animate);
 
-    // Resize listener
-    window.addEventListener('resize', () => {
-      const newW = container.clientWidth || 300;
-      const newH = container.clientHeight || 300;
-      camera.aspect = newW / newH;
-      camera.updateProjectionMatrix();
-      renderer.setSize(newW, newH);
-    });
+    function resizeCanvas() {
+      const w = window.innerWidth || container.clientWidth || 280;
+      const h = window.innerHeight || container.clientHeight || 280;
+      if (w > 50 && h > 50 && renderer && camera) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+    }
 
-    // Listen for messages from React Native
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 100);
+    setTimeout(resizeCanvas, 500);
+
     function handleMessage(event) {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
@@ -320,6 +326,11 @@ const THREE_HTML = `
 
     window.addEventListener('message', handleMessage);
     document.addEventListener('message', handleMessage);
+
+    // Notify ready
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY' }));
+    }
   </script>
 </body>
 </html>
@@ -330,6 +341,8 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
     const webViewRef = useRef<any>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const WebViewComp: any = WebView;
+
+    const htmlContent = React.useMemo(() => buildHtml(), []);
 
     React.useImperativeHandle(ref, () => ({
       roll: (targetNumber: number) => {
@@ -351,6 +364,8 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
         const data = JSON.parse(event.nativeEvent.data);
         if (data.type === 'ROLL_COMPLETE' && onRollComplete) {
           onRollComplete(data.number);
+        } else if (data.type === 'ERROR') {
+          console.warn('[ThreeD20 WebGL Error]:', data.message);
         }
       } catch (e) {
         // Ignore
@@ -362,7 +377,7 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
         <View style={[styles.container, { width: size, height: size }]}>
           {React.createElement('iframe', {
             ref: iframeRef,
-            srcDoc: THREE_HTML,
+            srcDoc: htmlContent,
             style: {
               width: '100%',
               height: '100%',
@@ -380,7 +395,7 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
         <WebViewComp
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html: THREE_HTML }}
+          source={{ html: htmlContent, baseUrl: 'https://localhost' }}
           style={styles.webView}
           onMessage={handleMessage}
           javaScriptEnabled={true}
@@ -388,7 +403,9 @@ export const ThreeD20Canvas = React.forwardRef<ThreeD20Ref, ThreeD20CanvasProps>
           scrollEnabled={false}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
-          androidLayerType="hardware"
+          allowFileAccess={true}
+          mixedContentMode="always"
+          overScrollMode="never"
         />
       </View>
     );
@@ -406,5 +423,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     width: '100%',
     height: '100%',
+    opacity: 0.99, // ensures hardware rendering on Android
   },
 });
