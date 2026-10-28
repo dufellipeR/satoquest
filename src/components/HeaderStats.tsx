@@ -2,17 +2,22 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/context/GameContext';
 import { BitcoinColors } from '@/constants/theme';
 
 export const HeaderStats: React.FC = () => {
   const { userState } = useGame();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const rollsCount = userState.diceRollsAvailable ?? 0;
 
   return (
-    <View style={styles.container}>
+    // O inset do topo é aplicado aqui (e não no SafeAreaView das telas) para o
+    // background do header se estender sob a status bar, em vez de aparecer o
+    // fundo da tela como uma faixa de outra cor.
+    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
       {/* Level & Streak */}
       <View style={styles.leftGroup}>
         <View style={styles.statPill}>

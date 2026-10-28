@@ -2,11 +2,21 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BitcoinColors } from '@/constants/theme';
 import { useGame } from '@/context/GameContext';
 
 export default function TabLayout() {
   const { userState } = useGame();
+  const insets = useSafeAreaInsets();
+  const isIOS = Platform.OS === 'ios';
+
+  // No Android a tab bar tinha altura fixa e ficava sob a barra de navegação do
+  // sistema. Somamos o inset à base (em vez de trocar a base) para não encolher
+  // o conteúdo da barra. No iOS os valores antigos já contemplavam o home
+  // indicator, então ficam intactos.
+  const tabBarHeight = (isIOS ? 88 : 68) + (isIOS ? 0 : insets.bottom);
+  const tabBarPaddingBottom = isIOS ? 28 : insets.bottom + 10;
 
   return (
     <Tabs
@@ -16,8 +26,8 @@ export default function TabLayout() {
           backgroundColor: BitcoinColors.surface,
           borderTopColor: BitcoinColors.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          height: tabBarHeight,
+          paddingBottom: tabBarPaddingBottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: BitcoinColors.bitcoin,

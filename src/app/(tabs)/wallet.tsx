@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderStats } from '@/components/HeaderStats';
 import { WithdrawModal } from '@/components/WithdrawModal';
@@ -24,7 +24,7 @@ export default function WalletScreen() {
   const brlEstimate = ((userState.satsBalance / 100000000) * 520000).toFixed(2);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       <HeaderStats />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

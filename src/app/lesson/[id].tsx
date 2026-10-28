@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { MODULES } from '@/constants/curriculum';
@@ -19,6 +19,7 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { completeLesson } = useGame();
+  const insets = useSafeAreaInsets();
 
   // Find the lesson across modules
   const currentModule = MODULES.find(m => m.lessons.some(l => l.id === id));
@@ -41,7 +42,7 @@ export default function LessonScreen() {
 
   if (!lesson) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Lição não encontrada</Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
@@ -98,7 +99,7 @@ export default function LessonScreen() {
 
   if (isCompleted) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.celebrationContainer}>
           <View style={styles.celebrationIconBox}>
             <MaterialCommunityIcons name="dice-d20" size={64} color="#FFD700" />
@@ -166,7 +167,7 @@ export default function LessonScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Top Header with Close and Progress */}
       <View style={styles.topNav}>
         <TouchableOpacity
@@ -190,7 +191,10 @@ export default function LessonScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.contentBody} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.contentBody, { paddingBottom: 100 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* READING STEP MODE */}
         {isReadingStep && currentStep && (
           <View style={styles.stepContainer}>
@@ -311,7 +315,7 @@ export default function LessonScreen() {
       </ScrollView>
 
       {/* Bottom Sticky Action Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
         {isReadingStep ? (
           <TouchableOpacity style={styles.footerPrimaryBtn} onPress={handleNextStep}>
             <Text style={styles.footerPrimaryBtnText}>

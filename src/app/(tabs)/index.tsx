@@ -5,7 +5,8 @@ import { BitcoinColors } from '@/constants/theme';
 import { triggerHaptic, useGame } from '@/context/GameContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LearnScreen() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function LearnScreen() {
   const rollsLeft = userState.diceRollsAvailable ?? 0;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       <HeaderStats />
 
       <ScrollView
