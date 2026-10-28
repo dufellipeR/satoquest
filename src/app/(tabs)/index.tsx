@@ -1,12 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { HeaderStats } from '@/components/HeaderStats';
 import { ModuleCard } from '@/components/ModuleCard';
 import { MODULES } from '@/constants/curriculum';
 import { BitcoinColors } from '@/constants/theme';
-import { useGame, triggerHaptic } from '@/context/GameContext';
+import { triggerHaptic, useGame } from '@/context/GameContext';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function LearnScreen() {
   const router = useRouter();
@@ -30,17 +29,16 @@ export default function LearnScreen() {
           <View style={styles.heroLeft}>
             <View style={styles.tagBadge}>
               <Ionicons name="sparkles" size={12} color="#FFD700" />
-              <Text style={styles.tagBadgeText}>EDUCAÇÃO BITCOIN • D&D RPG</Text>
+              <Text style={styles.tagBadgeText}>EDUCAÇÃO BITCOIN</Text>
             </View>
             <Text style={styles.heroTitle}>Sua Jornada para a Soberania</Text>
             <Text style={styles.heroSubtitle}>
-              Estude conceitos sólidos, role o Dado D20 de D&D e ganhe satoshinhos a cada lição!
+              Estude conceitos sólidos, role o dado e ganhe satoshinhos a cada lição!
             </Text>
           </View>
 
           <View style={styles.heroProgressBox}>
             <Text style={styles.progressNumber}>{overallPercent}%</Text>
-            <Text style={styles.progressLabel}>Concluído</Text>
           </View>
         </View>
 
@@ -63,7 +61,7 @@ export default function LearnScreen() {
                   Você tem {rollsLeft} rolagem{rollsLeft > 1 ? 'ns' : ''} de D20!
                 </Text>
                 <Text style={styles.diceAlertDesc}>
-                  {"Role o dado estilo Baldur's Gate e colete satoshinhos 🎲"}
+                  {"Role o dado e colete satoshinhos 🎲"}
                 </Text>
               </View>
             </View>

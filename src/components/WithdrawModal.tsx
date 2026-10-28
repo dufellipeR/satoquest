@@ -1,17 +1,17 @@
+import { BitcoinColors } from '@/constants/theme';
+import { triggerHaptic, useGame } from '@/context/GameContext';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  TextInput,
   ActivityIndicator,
+  Modal,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useGame, triggerHaptic } from '@/context/GameContext';
-import { BitcoinColors } from '@/constants/theme';
 
 interface WithdrawModalProps {
   visible: boolean;
@@ -305,7 +305,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ visible, onClose }
                 </View>
 
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleResetAndClose}>
-                  <Text style={styles.confirmBtnText}>Concluir & Fechar</Text>
+                  <Text style={styles.confirmBtnText}> Concluir </Text>
                 </TouchableOpacity>
               </View>
             )}

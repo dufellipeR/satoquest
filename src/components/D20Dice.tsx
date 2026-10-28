@@ -1,17 +1,17 @@
+import { BitcoinColors } from '@/constants/theme';
+import { triggerHaptic, useGame } from '@/context/GameContext';
+import { D20Result } from '@/types';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
   Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useGame, triggerHaptic } from '@/context/GameContext';
-import { BitcoinColors } from '@/constants/theme';
-import { D20Result } from '@/types';
 import { ThreeD20Canvas, ThreeD20Ref, ThreeD20Status } from './ThreeD20Canvas';
 
 const { width } = Dimensions.get('window');
@@ -116,11 +116,6 @@ export const D20Dice: React.FC = () => {
             onStatusChange={setDiceStatus}
           />
         </View>
-
-        {/* Dynamic 3D Tag */}
-        <View style={styles.threeDTag}>
-          <Text style={styles.threeDTagText}>3D REAL • THREE.JS</Text>
-        </View>
       </View>
 
       {/* Roll Action Button */}
@@ -154,9 +149,9 @@ export const D20Dice: React.FC = () => {
         </Text>
       </TouchableOpacity>
 
-      {/* D&D Tiers Breakdown Guide */}
+      {/*Tiers Breakdown Guide */}
       <View style={styles.tierGuideCard}>
-        <Text style={styles.tierGuideTitle}>Tabela de Recompensas D&D</Text>
+        <Text style={styles.tierGuideTitle}>Tabela de Recompensas</Text>
         <View style={styles.tierList}>
           <View style={styles.tierItem}>
             <View style={[styles.tierTag, { backgroundColor: 'rgba(255, 184, 0, 0.2)' }]}>

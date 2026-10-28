@@ -1,9 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { HeaderStats } from '@/components/HeaderStats';
 import { D20Dice } from '@/components/D20Dice';
+import { HeaderStats } from '@/components/HeaderStats';
 import { BitcoinColors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function DiceScreen() {
   return (
@@ -12,11 +11,7 @@ export default function DiceScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerBox}>
-          <View style={styles.iconTag}>
-            <MaterialCommunityIcons name="dice-d20" size={16} color={BitcoinColors.bitcoinGold} />
-            <Text style={styles.iconTagText}>{"ESTILO BALDUR'S GATE & D&D"}</Text>
-          </View>
-          <Text style={styles.title}>O Dado do Destino (D20)</Text>
+          <Text style={styles.title}>O Dado de Satoshi (D20)</Text>
           <Text style={styles.subtitle}>
             Invoque o poder do consenso descentralizado. Role o D20 e colete satoshinhos a cada conquista!
           </Text>
@@ -27,7 +22,7 @@ export default function DiceScreen() {
 
         {/* Rules & Modifiers Card */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Como Ganhar Mais Rolagens e Bônus?</Text>
+          <Text style={styles.infoTitle}>Como Ganhar Mais Rolagens?</Text>
 
           <View style={styles.infoRow}>
             <Ionicons name="checkmark-circle" size={18} color={BitcoinColors.success} />
