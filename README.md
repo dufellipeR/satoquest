@@ -7,8 +7,7 @@
 ## 🎯 Objetivos Atendidos (Alinhamento UNINTER)
 
 - **Ensinar os fundamentos da rede Bitcoin:** 4 módulos progressivos com conceitos claros, analogias didáticas e quizzes de fixação interativos com explicações para cada resposta.
-- **Gamificar o ensino da rede Bitcoin:** Sistema RPG estilo D&D e Baldur's Gate 3 com níveis, streaks, bônus de proficiência, galeria de conquistas (Badges) e o **Dado do Destino (D20)** para sortear recompensas em satoshinhos.
-- **Incentivar o uso de ferramentas do ecossistema:** O Módulo 4 apresenta ferramentas reais (Mempool.space, BlueWallet, Muun, Phoenix, Sparrow, Bisq, BTCPay Server) com guias práticos dentro das lições.
+- **Gamificar o ensino da rede Bitcoin:** Sistema RPG estilo D&D com níveis, streaks, bônus de proficiência, galeria de conquistas (Badges) e o **Dado de Satoshi (D20)** para sortear recompensas em satoshinhos.
 - **Desenvolver em React Native:** Desenvolvido com React Native, Expo Router, tema Bitcoin Dark Mode e arquitetura 100% offline-first via AsyncStorage.
 
 ---
